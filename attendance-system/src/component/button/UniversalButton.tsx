@@ -2,6 +2,7 @@ interface Props {
   text: string;
   onClick?: () => void;
   disabled?: boolean;
+  variant?: string;
 }
 
 const UniversalButton = ({ text, onClick, disabled }: Props) => {
