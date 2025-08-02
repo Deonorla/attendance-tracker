@@ -1,8 +1,98 @@
+import API from "../api";
 import { useNavigate } from "react-router-dom";
 import UniversalButton from "../component/button/UniversalButton";
+import { useState } from "react";
+import { toast } from "sonner";
+import { AxiosError } from "axios";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+
+  const [locationError, setLocationError] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async () => {
+    setLocationError("");
+
+    // Basic validation
+    if (!formData.name || !formData.email || !formData.password) {
+      toast.error("All fields are required");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Get user location
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            resolve,
+            (error) =>
+              reject(new Error("Location access required: " + error.message)),
+            { timeout: 10000, maximumAge: 0 }
+          );
+        }
+      );
+
+      const location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+      };
+
+      // Prepare signup data with location
+      const signupData = {
+        ...formData,
+        location,
+      };
+
+      const response = await API.post("/auth/register", signupData);
+
+      if (response.data.success) {
+        toast.success("Account created successfully!");
+        navigate("/login");
+      } else {
+        toast.error(response.data.message || "Signup failed");
+      }
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as { message: unknown }).message === "string"
+      ) {
+        const errMsg = (error as { message: string }).message;
+        if (errMsg.includes("Location access")) {
+          setLocationError(errMsg);
+        } else {
+          const axiosError = error as AxiosError<{ message?: string }>;
+          const response = axiosError.response;
+          toast.error(response?.data?.message || errMsg || "Signup failed");
+        }
+      } else {
+        toast.error("Signup failed");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex justify-center items-center w-full h-screen">
       <div className="  flex  flex-col  w-[90%] md:w-[70%] lg:w-[50%]  p-4 z-1  h-fit mb-5  border border-n-1/10 rounded-3xl  xl:w-[30%] ">
@@ -26,11 +116,12 @@ const Signup = () => {
             </p>
             <div className=" my-4 items-center pr-8 pl-2 h-[2rem] border-[#595959] hover:border-[#fc923b]  bg-[#141414] border-solid border rounded-[6px] flex">
               <input
+                name="name"
                 className="border-none w-full text-white pl-0 focus:outline-none placeholder:text-[0.8rem] focus:ring-0 placeholder:text-[#595959] appearance-none text-[0.9rem] bg-[#141414] py-[.1rem]"
                 placeholder="Input full name"
                 type="text"
-                // onChange={onTitleChange}
-                // value={title}
+                onChange={handleChange}
+                value={formData.name}
               />
             </div>
           </div>
@@ -40,11 +131,12 @@ const Signup = () => {
             </p>
             <div className=" my-4 items-center pr-8 pl-2 h-[2rem] border-[#595959] hover:border-[#fc923b]  bg-[#141414] border-solid border rounded-[6px] flex">
               <input
+                name="email"
                 className="border-none w-full text-white pl-0 focus:outline-none placeholder:text-[0.8rem] focus:ring-0 placeholder:text-[#595959] appearance-none text-[0.9rem] bg-[#141414] py-[.1rem]"
                 placeholder="Input email"
                 type="text"
-                // onChange={onTitleChange}
-                // value={title}
+                onChange={handleChange}
+                value={formData.email}
               />
             </div>
           </div>
@@ -54,11 +146,12 @@ const Signup = () => {
             </p>
             <div className=" my-4 items-center pr-8 pl-2 h-[2rem] border-[#595959] hover:border-[#fc923b]  bg-[#141414] border-solid border rounded-[6px] flex">
               <input
+                name="password"
                 className="border-none w-full text-white pl-0 focus:outline-none placeholder:text-[0.8rem] focus:ring-0 placeholder:text-[#595959] appearance-none text-[0.9rem] bg-[#141414] py-[.1rem]"
                 placeholder="Input password"
-                type="text"
-                // onChange={onTitleChange}
-                // value={title}
+                type="password"
+                onChange={handleChange}
+                value={formData.password}
               />
             </div>
           </div>
@@ -68,16 +161,21 @@ const Signup = () => {
             </p>
             <div className=" my-4 items-center pr-8 pl-2 h-[2rem] border-[#595959] hover:border-[#fc923b]  bg-[#141414] border-solid border rounded-[6px] flex">
               <input
+                name="confirmPassword"
                 className="border-none w-full text-white pl-0 focus:outline-none placeholder:text-[0.8rem] focus:ring-0 placeholder:text-[#595959] appearance-none text-[0.9rem] bg-[#141414] py-[.1rem]"
                 placeholder="Input password"
-                type="text"
-                // onChange={onTitleChange}
-                // value={title}
+                type="password"
+                onChange={handleChange}
+                value={formData.confirmPassword}
               />
             </div>
           </div>
           <div className="flex w-full justify-center items-center">
-            <UniversalButton text="Sign up" />
+            <UniversalButton
+              onClick={handleSubmit}
+              text={loading ? "Signing up..." : "Sign up"}
+              disabled={loading}
+            />
           </div>
           <div className="mt-8">
             <p className="text-[.7rem] lg:text-[.82rem] text-center text-color-7 my-[.2rem]">

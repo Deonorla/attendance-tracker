@@ -1,13 +1,25 @@
 const mongoose = require(`mongoose`);
 const bcrypt = require(`bcryptjs`);
 
+const LocationSchema = new mongoose.Schema({
+  latitude: Number,
+  longitude: Number,
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const UserSchema = new mongoose.Schema({
-  name: String,
+  name: { type: String, required: true },
   email: {
     type: String,
     unique: true,
+    required: true,
   },
-  password: String,
+  password: { type: String, required: true },
+  signupLocation: LocationSchema, // Store signup location
+  lastLoginLocation: LocationSchema, // Track last login location
 });
 
 UserSchema.pre("save", async function (next) {
