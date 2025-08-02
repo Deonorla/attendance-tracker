@@ -44,7 +44,7 @@ router.post("/register", async (req, res) => {
     if (userExists) {
       return res
         .status(400)
-        .json({ success: false, message: "User already exists" });
+        .json({ success: false, message: "User already exists, pls login" });
     }
 
     const user = await User.create({

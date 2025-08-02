@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import UniversalButton from "../component/button/UniversalButton";
 import { toast } from "sonner";
 import API from "../api";
+import { getLocation } from "../component/utils/utils";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,37 +26,29 @@ const Login = () => {
 
     try {
       setLoading(true);
+      toast.info("Detecting your location...");
 
-      // Get current location
-      const position = await new Promise<GeolocationPosition>(
-        (resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            resolve,
-            (error) => reject(new Error(getLocationErrorMessage(error))),
-            {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0,
-            }
-          );
-        }
-      );
+      // Get location (GPS or IP fallback)
+      const location = await getLocation();
+      console.log("Location obtained:", location);
 
       // Verify location accuracy
-      if (position.coords.accuracy > 50) {
-        throw new Error(
-          "Location accuracy too low. Please move to an open area."
-        );
-      }
+      // if (location.accuracy > 50) {
+      //   throw new Error(
+      //     "Location accuracy too low. Please be within your office proximity."
+      //   );
+      // }
 
       const loginData = {
         ...credentials,
         location: {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracy: location.accuracy,
         },
       };
+
+      // console.log("loginData", loginData);
 
       const response = await API.post("/auth/login", loginData);
 
@@ -64,7 +57,7 @@ const Login = () => {
         localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
         toast.success("Login successful!");
-        navigate("/dashboard");
+        // navigate("/dashboard");
       }
     } catch (error: unknown) {
       type ErrorWithResponse = {
@@ -169,7 +162,7 @@ const Login = () => {
             <p className="text-[.7rem] lg:text-[.82rem] text-center text-color-7 my-[.2rem]">
               Don't have an account?{" "}
               <span
-                onClick={() => navigate("/signup")}
+                onClick={() => navigate("/")}
                 className="bg-gradient-to-r from-linear-1 to-linear-2 text-transparent bg-clip-text hover:underline cursor-pointer lg:text-[.82rem] text-[.7rem]"
               >
                 Sign up

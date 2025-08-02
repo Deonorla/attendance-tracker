@@ -4,6 +4,7 @@ import UniversalButton from "../component/button/UniversalButton";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { getLocation } from "../component/utils/utils";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -37,26 +38,13 @@ const Signup = () => {
 
     try {
       setLoading(true);
+      toast.info("Detecting your location...");
 
-      // Get user location
-      const position = await new Promise<GeolocationPosition>(
-        (resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            resolve,
-            (error) =>
-              reject(new Error("Location access required: " + error.message)),
-            { timeout: 10000, maximumAge: 0 }
-          );
-        }
-      );
+      // Get location (GPS or IP fallback)
+      const location = await getLocation();
+      console.log("Location obtained:", location);
 
-      const location = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-      };
-
-      // Prepare signup data with location
+      // Prepare signup data
       const signupData = {
         ...formData,
         location,
@@ -71,19 +59,16 @@ const Signup = () => {
         toast.error(response.data.message || "Signup failed");
       }
     } catch (error: unknown) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "message" in error &&
-        typeof (error as { message: unknown }).message === "string"
-      ) {
-        const errMsg = (error as { message: string }).message;
-        if (errMsg.includes("Location access")) {
-          setLocationError(errMsg);
+      if (error instanceof Error) {
+        if (error.message.includes("location")) {
+          setLocationError(error.message);
         } else {
           const axiosError = error as AxiosError<{ message?: string }>;
-          const response = axiosError.response;
-          toast.error(response?.data?.message || errMsg || "Signup failed");
+          toast.error(
+            axiosError.response?.data?.message ||
+              error.message ||
+              "Signup failed"
+          );
         }
       } else {
         toast.error("Signup failed");
