@@ -10,6 +10,35 @@ const LocationSchema = new mongoose.Schema({
   },
 });
 
+const attendanceSchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    required: true,
+    index: true,
+  },
+  signIn: {
+    time: Date,
+    location: {
+      latitude: Number,
+      longitude: Number,
+      accuracy: Number,
+    },
+  },
+  signOut: {
+    time: Date,
+    location: {
+      latitude: Number,
+      longitude: Number,
+      accuracy: Number,
+    },
+  },
+  status: {
+    type: String,
+    enum: ["present", "partial", "absent"],
+    default: "absent",
+  },
+});
+
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: {
@@ -20,6 +49,19 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   signupLocation: LocationSchema, // Store signup location
   lastLoginLocation: LocationSchema, // Track last login location
+  attendance: [attendanceSchema],
+  lastActive: Date,
+});
+
+attendanceSchema.pre("save", function (next) {
+  if (this.signIn && this.signOut) {
+    this.status = "present";
+  } else if (this.signIn) {
+    this.status = "partial";
+  } else {
+    this.status = "absent";
+  }
+  next();
 });
 
 UserSchema.pre("save", async function (next) {

@@ -88,7 +88,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-screen bg-[#141414]">
+    <div className="flex flex-col w-full h-full bg-[#141414]">
       <Header />
 
       <div className="mx-4 sm:mx-8 mt-8 flex flex-col mb-4">
