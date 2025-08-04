@@ -54,12 +54,15 @@ const UserSchema = new mongoose.Schema({
 });
 
 attendanceSchema.pre("save", function (next) {
-  if (this.signIn && this.signOut) {
-    this.status = "present";
-  } else if (this.signIn) {
-    this.status = "partial";
-  } else {
-    this.status = "absent";
+  // Only update status if this is a new record or signOut is being modified
+  if (this.isNew || this.isModified("signOut")) {
+    if (this.signIn && this.signOut) {
+      this.status = "present";
+    } else if (this.signIn) {
+      this.status = "partial";
+    } else {
+      this.status = "absent";
+    }
   }
   next();
 });

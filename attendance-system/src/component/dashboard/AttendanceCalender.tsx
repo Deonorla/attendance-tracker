@@ -11,28 +11,48 @@ import {
   startOfWeek,
   endOfWeek,
   addDays,
-  getDay,
 } from "date-fns";
-
-interface AttendanceRecord {
-  date: Date;
-  signedIn: boolean;
-  signedOut: boolean;
-}
+import API from "../../api";
+import type { AttendanceRecord } from "../../../types";
 
 const AttendanceCalendar = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<"week" | "month">("month");
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Get properly aligned days for the calendar view
+  // Fetch attendance data from API
+  const fetchAttendance = async () => {
+    setLoading(true);
+    try {
+      const response = await API.get<{ attendance: AttendanceRecord[] }>(
+        "/attendance/history",
+        {
+          params: {
+            year: currentMonth.getFullYear(),
+            month: currentMonth.getMonth() + 1,
+          },
+        }
+      );
+      setAttendanceData(response.data.attendance || []);
+    } catch (error) {
+      console.error("Failed to fetch attendance:", error);
+      setAttendanceData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAttendance();
+  }, [currentMonth]);
+
   const getCalendarDays = () => {
     if (viewMode === "week") {
       const start = startOfWeek(currentMonth);
       const end = endOfWeek(currentMonth);
       return eachDayOfInterval({ start, end });
     } else {
-      // For month view, we need to include days from previous/next month to fill the grid
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
       const startDate = startOfWeek(monthStart);
@@ -41,40 +61,33 @@ const AttendanceCalendar = () => {
     }
   };
 
-  // Check attendance status for a day
   const getAttendanceStatus = (day: Date) => {
-    const record = attendanceData.find((item) => isSameDay(item.date, day));
+    const record = attendanceData.find((item) =>
+      isSameDay(new Date(item.date), day)
+    );
     if (!record) return "absent";
-    if (record.signedIn && record.signedOut) return "present";
-    if (record.signedIn) return "partial";
+    if (record.signIn && record.signOut) return "present";
+    if (record.signIn) return "partial";
     return "absent";
   };
 
-  // Navigation handlers
   const prevPeriod = () =>
     setCurrentMonth(
       viewMode === "month"
         ? subMonths(currentMonth, 1)
         : addDays(currentMonth, -7)
     );
+
   const nextPeriod = () =>
     setCurrentMonth(
       viewMode === "month"
         ? addMonths(currentMonth, 1)
         : addDays(currentMonth, 7)
     );
+
   const goToToday = () => setCurrentMonth(new Date());
 
-  // Mock data - replace with your API data
-  useEffect(() => {
-    // This would be your API call in production
-    const mockData: AttendanceRecord[] = [
-      { date: new Date(2023, 7, 1), signedIn: true, signedOut: true }, // August 1
-      { date: new Date(2023, 7, 3), signedIn: true, signedOut: true }, // August 3 (today)
-      { date: new Date(2023, 7, 5), signedIn: true, signedOut: false }, // August 5 (partial)
-    ];
-    setAttendanceData(mockData);
-  }, []);
+  const calendarDays = getCalendarDays();
 
   return (
     <div className="bg-[#1E1E1E] p-4 rounded-lg border border-n-1/10 mt-6">
@@ -89,24 +102,28 @@ const AttendanceCalendar = () => {
           <button
             onClick={() => setViewMode(viewMode === "month" ? "week" : "month")}
             className="px-3 py-1 text-xs bg-n-1/10 text-white rounded"
+            disabled={loading}
           >
             {viewMode === "month" ? "Week View" : "Month View"}
           </button>
           <button
             onClick={prevPeriod}
             className="px-3 py-1 text-xs bg-n-1/10 text-white rounded"
+            disabled={loading}
           >
             &lt;
           </button>
           <button
             onClick={goToToday}
             className="px-3 py-1 text-xs bg-n-1/10 text-white rounded"
+            disabled={loading}
           >
             Today
           </button>
           <button
             onClick={nextPeriod}
             className="px-3 py-1 text-xs bg-n-1/10 text-white rounded"
+            disabled={loading}
           >
             &gt;
           </button>
@@ -124,38 +141,47 @@ const AttendanceCalendar = () => {
 
       {/* Calendar days */}
       <div className="grid grid-cols-7 gap-1">
-        {getCalendarDays().map((day) => {
-          const status = getAttendanceStatus(day);
-          const isCurrentMonth = isSameMonth(day, currentMonth);
-          const isToday = isSameDay(day, new Date());
-          const dayNumber = format(day, "d");
+        {loading
+          ? Array.from({ length: viewMode === "month" ? 35 : 7 }).map(
+              (_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="h-12 bg-[#2A2A2A] rounded animate-pulse"
+                />
+              )
+            )
+          : calendarDays.map((day) => {
+              const status = getAttendanceStatus(day);
+              const isCurrentMonth = isSameMonth(day, currentMonth);
+              const isToday = isSameDay(day, new Date());
+              const dayNumber = format(day, "d");
 
-          return (
-            <div
-              key={day.toString()}
-              className={`min-h-12 rounded flex flex-col items-center justify-center text-xs p-1
-                ${isCurrentMonth ? "text-white" : "text-n-2 opacity-50"}
-                ${isToday ? "ring-2 ring-blue-500" : ""}
-                ${
-                  status === "present"
-                    ? "bg-green-900"
-                    : status === "partial"
-                    ? "bg-yellow-900"
-                    : status === "absent"
-                    ? "bg-red-900"
-                    : "bg-[#2A2A2A]"
-                }`}
-            >
-              <span>{dayNumber}</span>
-              {status === "present" && (
-                <span className="text-[8px] mt-1">✓✓</span>
-              )}
-              {status === "partial" && (
-                <span className="text-[8px] mt-1">✓</span>
-              )}
-            </div>
-          );
-        })}
+              return (
+                <div
+                  key={day.toString()}
+                  className={`min-h-12 rounded flex flex-col items-center justify-center text-xs p-1
+                  ${isCurrentMonth ? "text-white" : "text-n-2 opacity-50"}
+                  ${isToday ? "ring-2 ring-blue-500" : ""}
+                  ${
+                    status === "present"
+                      ? "bg-green-900 hover:bg-green-800"
+                      : status === "partial"
+                      ? "bg-yellow-900 hover:bg-yellow-800"
+                      : status === "absent"
+                      ? "bg-n-1/20 hover:bg-n-1/10"
+                      : "bg-[#2A2A2A] hover:bg-[#3A3A3A]"
+                  }`}
+                >
+                  <span>{dayNumber}</span>
+                  {status === "present" && (
+                    <span className="text-[8px] mt-1">✓✓</span>
+                  )}
+                  {status === "partial" && (
+                    <span className="text-[8px] mt-1">✓</span>
+                  )}
+                </div>
+              );
+            })}
       </div>
     </div>
   );

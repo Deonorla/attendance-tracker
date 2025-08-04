@@ -11,10 +11,23 @@ const OFFICE_LOCATION = {
 // signIn  to handle staff sign-in attendance
 exports.signIn = async (req, res) => {
   try {
+    console.log("Received sign-in request:", req.body); // Log incoming data
+
     const { latitude, longitude, accuracy } = req.body;
+
+    // Validate required fields
+    if (!latitude || !longitude) {
+      console.error("Missing coordinates");
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude are required",
+      });
+    }
+
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to start of the day
-    // Verify if the user is within the office radius
+    today.setHours(0, 0, 0, 0);
+
+    // Verify office proximity
     if (
       !isWithinRadius(
         latitude,
@@ -24,21 +37,29 @@ exports.signIn = async (req, res) => {
         OFFICE_LOCATION.radius
       )
     ) {
+      console.error("Outside office radius");
       return res.status(400).json({
         success: false,
         message: "You must be within the office premises to sign in.",
       });
     }
-    //    check if staff has already signed in today
+
+    // Check existing attendance
     const existing = await User.findOne({
       _id: req.user.id,
       "attendance.date": { $gte: today },
     });
 
     if (existing) {
+      const lastSignIn = existing.attendance.find(
+        (a) => a.date >= today && a.signIn
+      )?.signIn?.time;
+
       return res.status(400).json({
         success: false,
         message: "Already signed in today",
+        lastSignInTime: lastSignIn, // Add this
+        code: "ALREADY_SIGNED_IN", // Add error code
       });
     }
 
@@ -49,19 +70,17 @@ exports.signIn = async (req, res) => {
           date: new Date(),
           signIn: {
             time: new Date(),
-            location: {
-              latitude,
-              longitude,
-              accuracy,
-            },
+            location: { latitude, longitude, accuracy },
           },
-          status: "partial", // Set status to partial if only signIn is recorded
+          status: "partial",
         },
       },
     });
 
+    console.log("Sign-in successful for user:", req.user.id);
     res.json({ success: true, message: "Signed in successfully" });
   } catch (error) {
+    console.error("Sign-in error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Server error",
@@ -134,9 +153,9 @@ exports.signOut = async (req, res) => {
 
 exports.getHistory = async (req, res) => {
   try {
-    const { month, week } = req.query;
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const { month, year } = req.query;
+    const startDate = new Date(year, month - 1, 1); // First day of month
+    const endDate = new Date(year, month, 0); // Last day of month
 
     const user = await User.findOne(
       { _id: req.user.id },
