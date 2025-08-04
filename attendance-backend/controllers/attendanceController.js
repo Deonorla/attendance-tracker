@@ -126,14 +126,18 @@ exports.signOut = async (req, res) => {
     }
 
     // Update the attendance record with sign-out details
-    await User.updateOne(
-      { _id: req.user.id, "attendance.date": { $gte: today } },
+    await User.findOneAndUpdate(
+      {
+        _id: req.user.id,
+        "attendance.date": { $gte: today },
+      },
       {
         $set: {
           "attendance.$.signOut": {
             time: new Date(),
             location: { latitude, longitude, accuracy },
           },
+          "attendance.$.status": "present", // Force status update
         },
       }
     );

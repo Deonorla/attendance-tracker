@@ -34,6 +34,7 @@ const Dashboard = () => {
     date: new Date(),
     status: "absent",
   });
+
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const now = new Date();
@@ -152,6 +153,19 @@ const Dashboard = () => {
         accuracy: coords.accuracy,
       });
 
+      setAttendance((prev) => ({
+        ...prev,
+        signOut: {
+          time: new Date(),
+          location: {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            accuracy: coords.accuracy,
+          },
+        },
+        status: "present",
+      }));
+
       toast.success("Signed out successfully");
       await fetchAttendance();
     } catch (error: unknown) {
@@ -184,7 +198,7 @@ const Dashboard = () => {
         <button
           onClick={fetchAttendance}
           disabled={isRefreshing}
-          className="px-4 py-2 bg-blue-600 text-white text-xs rounded-lg mb-4 self-end"
+          className="px-4 py-2 bg-n-1/20 hover:bg-n-1/10 text-white text-xs rounded-lg mb-4 self-end cursor-pointer"
         >
           {isRefreshing ? "Refreshing..." : "Refresh Status"}
         </button>
@@ -222,6 +236,8 @@ const Dashboard = () => {
             onAction={handleSignIn}
             disabled={!!attendance.signIn}
             loading={loading && !attendance.signOut}
+            signInstatus={!!attendance.signIn}
+            signOutstatus={!!attendance.signOut}
           />
 
           <Card
@@ -249,6 +265,8 @@ const Dashboard = () => {
             onAction={handleSignOut}
             disabled={!attendance.signIn || !!attendance.signOut}
             loading={loading && !!attendance.signIn}
+            signInstatus={!!attendance.signIn}
+            signOutstatus={!!attendance.signOut}
           />
         </div>
 

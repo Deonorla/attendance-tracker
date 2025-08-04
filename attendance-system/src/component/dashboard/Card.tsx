@@ -1,3 +1,4 @@
+import Button from "../button/Button";
 import UniversalButton from "../button/UniversalButton";
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   onAction: () => void;
   disabled: boolean;
   loading: boolean;
+  signInstatus?: boolean;
+  signOutstatus?: boolean;
 }
 
 const statusColors = {
@@ -27,6 +30,8 @@ const Card = ({
   onAction,
   disabled,
   loading,
+  signInstatus,
+  signOutstatus,
 }: Props) => {
   return (
     <div className="w-full border border-n-1/10 p-4 rounded-lg shadow-md bg-[#1E1E1E]">
@@ -54,12 +59,18 @@ const Card = ({
       </div>
 
       <div className="flex w-full justify-center items-center mt-4">
-        <UniversalButton
-          text={loading ? "Processing..." : action}
-          onClick={onAction}
-          disabled={disabled || loading}
-          variant={title === "Sign-In" ? "primary" : "secondary"}
-        />
+        {action === "Sign In" && signInstatus ? (
+          <></>
+        ) : action === "Sign Out" && signOutstatus ? (
+          <></>
+        ) : (
+          <Button
+            text={loading ? "Processing..." : action}
+            onClick={onAction}
+            disabled={disabled || loading}
+            variant={title === "Sign-In" ? "primary" : "secondary"}
+          />
+        )}
       </div>
     </div>
   );
