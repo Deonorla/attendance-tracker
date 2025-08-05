@@ -156,13 +156,14 @@ const Login = () => {
               text={loading ? "Signing in..." : "Sign in"}
               onClick={handleLogin}
               disabled={loading}
+              className="mt-8"
             />
           </div>
           <div className="mt-8">
             <p className="text-[.7rem] lg:text-[.82rem] text-center text-color-7 my-[.2rem]">
               Don't have an account?{" "}
               <span
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/signup")}
                 className="bg-gradient-to-r from-linear-1 to-linear-2 text-transparent bg-clip-text hover:underline cursor-pointer lg:text-[.82rem] text-[.7rem]"
               >
                 Sign up

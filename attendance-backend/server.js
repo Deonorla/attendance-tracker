@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/auth");
+const adminRoutes = require("./routes/admin");
 const cors = require("cors");
 const attendanceRoutes = require("./routes/attendance");
 
@@ -26,6 +27,9 @@ app.use("/api/auth", authRoutes);
 
 // Use attendance routes
 app.use("/api/attendance", attendanceRoutes);
+
+// Use admin routes
+app.use("/api/admin", adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

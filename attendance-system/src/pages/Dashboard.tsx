@@ -183,9 +183,24 @@ const Dashboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      // Clear the token from storage
+      localStorage.removeItem("token");
+      // Clear the Authorization header from future requests
+      API.clearAuth(); // This will now work with TypeScript
+      // Redirect to login page
+      window.location.href = "/";
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Logout failed");
+    }
+  };
+
   return (
     <div className="flex flex-col w-full h-full bg-[#141414]">
-      <Header />
+      <Header handleLogout={handleLogout} />
 
       <div className="mx-4 sm:mx-8 mt-8 flex flex-col mb-4">
         <h2 className="text-white text-xl lg:text-2xl font-bold mt-4">

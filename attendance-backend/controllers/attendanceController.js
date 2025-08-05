@@ -95,8 +95,10 @@ exports.signOut = async (req, res) => {
     const { latitude, longitude, accuracy } = req.body;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
 
-    // Verify if the user is within the office radius
+    // Verify location
     if (
       !isWithinRadius(
         latitude,
@@ -108,28 +110,21 @@ exports.signOut = async (req, res) => {
     ) {
       return res.status(403).json({
         success: false,
-        message: "you must be within the office premises to sign out",
-      });
-    }
-    // find the user's attendance record for today
-    const user = await User.findOne({
-      _id: req.user.id,
-      "attendance.date": { $gte: today },
-      "attendance.signOut": { $exists: false },
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "No active sign-in found for today",
+        message: "You must be within the office premises to sign out",
       });
     }
 
-    // Update the attendance record with sign-out details
-    await User.findOneAndUpdate(
+    // Find today's attendance record with signIn but no signOut
+    const user = await User.findOneAndUpdate(
       {
         _id: req.user.id,
-        "attendance.date": { $gte: today },
+        attendance: {
+          $elemMatch: {
+            date: { $gte: today, $lt: tomorrow },
+            signIn: { $exists: true },
+            signOut: { $exists: false },
+          },
+        },
       },
       {
         $set: {
@@ -137,10 +132,19 @@ exports.signOut = async (req, res) => {
             time: new Date(),
             location: { latitude, longitude, accuracy },
           },
-          "attendance.$.status": "present", // Force status update
+          "attendance.$.status": "present",
         },
-      }
+      },
+      { new: true }
     );
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "No active sign-in found for today or already signed out",
+      });
+    }
+
     res.json({
       success: true,
       message: "Signed out successfully",
@@ -152,7 +156,6 @@ exports.signOut = async (req, res) => {
     });
   }
 };
-
 // getAttendance History
 
 exports.getHistory = async (req, res) => {
